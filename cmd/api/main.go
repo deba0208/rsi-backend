@@ -29,20 +29,38 @@ func main() {
 
 	router := gin.Default()
 
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status": "UP",
-		})
-	})
+	// Services — must be declared before route handlers that use them
+	mockProvider := &service.MockMarketDataProvider{}
+	rsiService := service.NewRSIService(mockProvider)
 
 	stockRepos := repository.NewStockRepository(client)
-	
 	stockService := service.NewStockService(stockRepos)
 
 	err = stockService.InitializeStocks("./internal/config/nse_stocks.json")
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status": "UP",
+		})
+	})
+
+	router.GET("/rsi", func(c *gin.Context) {
+		symbol := c.Query("symbol")
+		timeFrame := c.Query("timeFrame")
+		rsiValue, err := rsiService.RSI(symbol, timeFrame)
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{
+			"symbol":    symbol,
+			"timeFrame": timeFrame,
+			"rsi":       rsiValue,
+		})
+	})
 
 	log.Println("Server is running on :" + cfg.Port)
 
