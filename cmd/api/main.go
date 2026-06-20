@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/deba0208/stock-rsi-dashboard/internal/config"
+	"github.com/deba0208/stock-rsi-dashboard/internal/handler"
 	"github.com/deba0208/stock-rsi-dashboard/internal/redis"
 	"github.com/deba0208/stock-rsi-dashboard/internal/repository"
 	"github.com/deba0208/stock-rsi-dashboard/internal/service"
@@ -14,39 +15,40 @@ import (
 func main() {
 
 	cfg, err := config.LoadConfig()
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	client, err := redis.NewClient(cfg)
-
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
 
-	fmt.Println(client)
-
-	router := gin.Default()
-
-	// Services — must be declared before route handlers that use them
+	// --- Services ---
 	mockProvider := &service.MockMarketDataProvider{}
 	rsiService := service.NewRSIService(mockProvider)
 
 	stockRepos := repository.NewStockRepository(client)
 	stockService := service.NewStockService(stockRepos)
 
+	metricRepo := repository.NewMetricRepository(client)
+	metricService := service.NewMetricService(rsiService, metricRepo)
+
+	// Initialize stocks from JSON
 	err = stockService.InitializeStocks("./internal/config/nse_stocks.json")
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Warning: could not initialize stocks:", err)
 	}
 
+	// --- Router ---
+	router := gin.Default()
+
+	// Health
 	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status": "UP",
-		})
+		c.JSON(200, gin.H{"status": "UP"})
 	})
 
+	// RSI by query params
 	router.GET("/rsi", func(c *gin.Context) {
 		symbol := c.Query("symbol")
 		timeFrame := c.Query("timeFrame")
@@ -62,7 +64,12 @@ func main() {
 		})
 	})
 
+	// Top 50 by criteria (daily / weekly / monthly)
+	metricHandler := handler.NewMetricHandler(metricService)
+	router.GET("/metrics/top50/:criteria", metricHandler.GetTop50ByCriteria)
+
 	log.Println("Server is running on :" + cfg.Port)
 
+	// router.Run() blocks — must be last
 	router.Run(":" + cfg.Port)
 }
