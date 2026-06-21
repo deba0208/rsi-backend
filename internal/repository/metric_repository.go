@@ -32,8 +32,6 @@ func (r *MetricRepository) SaveMetric(metric models.StockMetric) error {
 		return err
 	}
 
-	fmt.Println(metric.Price)
-
 	// Update RSI sorted set rankings
 	return r.SaveRanking(
 		metric.Symbol,

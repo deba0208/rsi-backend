@@ -22,11 +22,11 @@ func NewRSIScheduler(
 	}
 }
 
-func (s *RSIScheduler) Run() {
+func (s *RSIScheduler) Run() error {
 	stocks, err := s.stockService.GetStocks()
 	if err != nil {
 		log.Printf("[scheduler] failed to fetch stocks: %v", err)
-		return
+		return err
 	}
 
 	log.Printf("[scheduler] starting RSI update for %d stocks", len(stocks))
@@ -57,4 +57,5 @@ func (s *RSIScheduler) Run() {
 	}
 
 	log.Printf("[scheduler] RSI update complete")
+	return nil
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/deba0208/stock-rsi-dashboard/internal/config"
 	"github.com/deba0208/stock-rsi-dashboard/internal/handler"
@@ -33,26 +32,23 @@ func main() {
 	rsiService := service.NewRSIService(marketProvider)
 
 	stockRepos := repository.NewStockRepository(client)
-	stockService := service.NewStockService(stockRepos)
+	nifty50Provider := service.NewNifty50Provider()
+	stockService := service.NewStockService(stockRepos, nifty50Provider)
 
 	metricRepo := repository.NewMetricRepository(client)
 	metricService := service.NewMetricService(rsiService, marketProvider, metricRepo)
 
-	// Initialize stocks from JSON
-	// NSE_STOCKS_PATH allows overriding the stocks file path at runtime;
-	// defaults to a path relative to where the binary is invoked.
-	stocksPath := os.Getenv("NSE_STOCKS_PATH")
-	if stocksPath == "" {
-		stocksPath = "./internal/config/nse_stocks.json"
-	}
-	err = stockService.InitializeStocks(stocksPath)
-	if err != nil {
-		fmt.Println("Warning: could not initialize stocks:", err)
-	}
+	// Initialize stocks in background — don't block server startup
+	go func() {
+		if err := stockService.InitializeStocks(); err != nil {
+			log.Println("Warning: could not initialize stocks:", err)
+		}
+	}()
 
 	// --- Scheduler ---
 	rsiScheduler := scheduler.NewRSIScheduler(stockService, metricService)
 
+	scheduler.Start(rsiScheduler)
 	// --- Router ---
 	router := gin.Default()
 
