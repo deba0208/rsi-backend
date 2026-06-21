@@ -102,15 +102,88 @@ func (r *MetricRepository) GetMetric(symbol string) (*models.StockMetric, error)
 	}, nil
 }
 
-func (r *MetricRepository) GetTop50ByCriteria(criteria string) ([]string, error) {
+func (r *MetricRepository) GetTopByTimeFrame(
+	timeFrame string,
+	limit int64,
+) ([]models.StockMetric, error) {
+	rankingKey := fmt.Sprintf(
+		"rsi:%s",
+		timeFrame,
+	)
 
-	ctx := context.Background()
+	symbols, err :=
+		r.client.ZRange(
+			context.Background(),
+			rankingKey,
+			0,
+			limit-1,
+		).Result()
 
-	// ZRevRange returns members in descending score order (highest RSI first)
-	return r.client.ZRevRange(
-		ctx,
-		"rsi:"+criteria,
-		0,
-		49,
-	).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	metrics :=
+		make(
+			[]models.StockMetric,
+			0,
+			len(symbols),
+		)
+
+	for _, symbol := range symbols {
+		metricKey :=
+			fmt.Sprintf(
+				"metric:%s",
+				symbol,
+			)
+
+		values, err :=
+			r.client.HGetAll(
+				context.Background(),
+				metricKey,
+			).Result()
+
+		if err != nil {
+			continue
+		}
+
+		price, _ :=
+			strconv.ParseFloat(
+				values["price"],
+				64,
+			)
+
+		dailyRsi, _ :=
+			strconv.ParseFloat(
+				values["dailyRsi"],
+				64,
+			)
+
+		weeklyRsi, _ :=
+			strconv.ParseFloat(
+				values["weeklyRsi"],
+				64,
+			)
+
+		monthlyRsi, _ :=
+			strconv.ParseFloat(
+				values["monthlyRsi"],
+				64,
+			)
+
+		metric := models.StockMetric{
+			Symbol:     values["symbol"],
+			Price:      price,
+			DailyRSI:   dailyRsi,
+			WeeklyRSI:  weeklyRsi,
+			MonthlyRSI: monthlyRsi,
+		}
+		metrics =
+			append(
+				metrics,
+				metric,
+			)
+	}
+
+	return metrics, nil
 }

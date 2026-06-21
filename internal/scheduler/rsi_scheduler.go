@@ -23,6 +23,9 @@ func NewRSIScheduler(
 }
 
 func (s *RSIScheduler) Run() error {
+	if err := s.stockService.InitializeStocks(); err != nil {
+		log.Printf("[scheduler] warning: failed to refresh stock list before run: %v", err)
+	}
 	stocks, err := s.stockService.GetStocks()
 	if err != nil {
 		log.Printf("[scheduler] failed to fetch stocks: %v", err)

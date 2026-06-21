@@ -24,8 +24,24 @@ func (h *MetricHandler) GetTop50ByCriteria(
 	c *gin.Context,
 ) {
 
-	result, err :=
-		h.service.GetTop50ByCriteria(c.Param("criteria"))
+	timeFrame :=
+		c.Query("timeFrame")
+
+	if timeFrame == "" {
+		c.JSON(
+			http.StatusBadRequest,
+			gin.H{
+				"error": "missing required query param: timeFrame",
+			},
+		)
+		return
+	}
+
+	metrics, err :=
+		h.service.GetTopByTimeFrame(
+			timeFrame,
+			50,
+		)
 
 	if err != nil {
 
@@ -41,6 +57,6 @@ func (h *MetricHandler) GetTop50ByCriteria(
 
 	c.JSON(
 		http.StatusOK,
-		result,
+		metrics,
 	)
 }

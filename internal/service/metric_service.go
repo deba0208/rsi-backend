@@ -68,6 +68,13 @@ func (s *MetricService) UpdateMetric(
 	return s.repo.SaveMetric(metric)
 }
 
-func (s *MetricService) GetTop50ByCriteria(criteria string) ([]string, error) {
-	return s.repo.GetTop50ByCriteria(criteria)
+func (s *MetricService) GetTopByTimeFrame(
+	timeFrame string,
+	limit int64,
+) ([]models.StockMetric, error) {
+
+	return s.repo.GetTopByTimeFrame(
+		timeFrame,
+		limit,
+	)
 }
