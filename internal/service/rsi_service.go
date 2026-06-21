@@ -37,11 +37,11 @@ func (s *RSIService) RSI(
 
 	switch timeFrame {
 	case Daily:
-		candles, err = s.provider.GetDailyCandles(symbol)
+		candles, err = s.provider.GetCandles(symbol, "1d")
 	case Weekly:
-		candles, err = s.provider.GetWeeklyCandles(symbol)
+		candles, err = s.provider.GetCandles(symbol, "1wk")
 	case Monthly:
-		candles, err = s.provider.GetMonthlyCandles(symbol)
+		candles, err = s.provider.GetCandles(symbol, "1mo")
 	default:
 		return 0, fmt.Errorf("invalid timeframe: %s", timeFrame)
 	}

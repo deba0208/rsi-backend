@@ -94,7 +94,8 @@ func (r *MetricRepository) GetTop50ByCriteria(criteria string) ([]string, error)
 
 	ctx := context.Background()
 
-	return r.client.ZRange(
+	// ZRevRange returns members in descending score order (highest RSI first)
+	return r.client.ZRevRange(
 		ctx,
 		"rsi:"+criteria,
 		0,

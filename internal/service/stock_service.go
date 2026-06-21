@@ -1,8 +1,6 @@
 package service
 
 import (
-	"fmt"
-
 	"github.com/deba0208/stock-rsi-dashboard/internal/repository"
 )
 
@@ -19,6 +17,5 @@ func (s *StockService) InitializeStocks(filePath string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(stocks)
 	return s.Repo.SaveStocks(stocks)
 }

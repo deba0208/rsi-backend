@@ -14,11 +14,9 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	err := godotenv.Load()
-
-	if err != nil {
-		return nil, err
-	}
+	// Ignore error — .env file may not exist in production/container environments
+	// where env vars are injected directly.
+	_ = godotenv.Load()
 
 	return &Config{
 		Port:          os.Getenv("PORT"),
