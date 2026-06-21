@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/deba0208/stock-rsi-dashboard/internal/models"
@@ -23,15 +22,39 @@ func (r *StockRepository) SaveStocks(stocks []models.Stock) error {
 	for _, stock := range stocks {
 		key := fmt.Sprintf("stock:%s", stock.Symbol)
 
-		data, err := json.Marshal(stock)
-		if err != nil {
-			return err
-		}
-
-		if err := r.Client.Set(ctx, key, data, 0).Err(); err != nil {
+		// Store each field as a named hash field
+		if err := r.Client.HSet(ctx, key,
+			"symbol", stock.Symbol,
+			"name", stock.Name,
+		).Err(); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (r *StockRepository) GetAllStocks() ([]models.Stock, error) {
+	ctx := context.Background()
+
+	keys, err := r.Client.Keys(ctx, "stock:*").Result()
+	if err != nil {
+		return nil, err
+	}
+
+	var stocks []models.Stock
+	for _, key := range keys {
+		// HGetAll returns map[string]string of all hash fields
+		fields, err := r.Client.HGetAll(ctx, key).Result()
+		if err != nil || len(fields) == 0 {
+			continue
+		}
+
+		stocks = append(stocks, models.Stock{
+			Symbol: fields["symbol"],
+			Name:   fields["name"],
+		})
+	}
+
+	return stocks, nil
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/deba0208/stock-rsi-dashboard/internal/models"
 	"github.com/deba0208/stock-rsi-dashboard/internal/redis"
 	"github.com/deba0208/stock-rsi-dashboard/internal/repository"
+	"github.com/deba0208/stock-rsi-dashboard/internal/scheduler"
 	"github.com/deba0208/stock-rsi-dashboard/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -35,7 +36,7 @@ func main() {
 	stockService := service.NewStockService(stockRepos)
 
 	metricRepo := repository.NewMetricRepository(client)
-	metricService := service.NewMetricService(rsiService, metricRepo)
+	metricService := service.NewMetricService(rsiService, marketProvider, metricRepo)
 
 	// Initialize stocks from JSON
 	// NSE_STOCKS_PATH allows overriding the stocks file path at runtime;
@@ -48,6 +49,9 @@ func main() {
 	if err != nil {
 		fmt.Println("Warning: could not initialize stocks:", err)
 	}
+
+	// --- Scheduler ---
+	rsiScheduler := scheduler.NewRSIScheduler(stockService, metricService)
 
 	// --- Router ---
 	router := gin.Default()
@@ -87,6 +91,17 @@ func main() {
 			"rsi":       rsiValue,
 		})
 	})
+
+	// Manual Scheduler Trigger
+	router.POST(
+		"/scheduler/run",
+		func(c *gin.Context) {
+			// Run async so the HTTP response returns immediately.
+			// Progress and errors are logged server-side.
+			go rsiScheduler.Run()
+			c.JSON(202, gin.H{"message": "scheduler started"})
+		},
+	)
 
 	// Top 50 by criteria (daily / weekly / monthly)
 	metricHandler := handler.NewMetricHandler(metricService)

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/deba0208/stock-rsi-dashboard/internal/models"
 	"github.com/deba0208/stock-rsi-dashboard/internal/repository"
 )
 
@@ -18,4 +19,8 @@ func (s *StockService) InitializeStocks(filePath string) error {
 		return err
 	}
 	return s.Repo.SaveStocks(stocks)
+}
+
+func (s *StockService) GetStocks() ([]models.Stock, error) {
+	return s.Repo.GetAllStocks()
 }

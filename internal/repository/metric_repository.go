@@ -2,7 +2,8 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
+	"strconv"
 
 	"github.com/deba0208/stock-rsi-dashboard/internal/models"
 	"github.com/redis/go-redis/v9"
@@ -16,19 +17,22 @@ func NewMetricRepository(client *redis.Client) *MetricRepository {
 	return &MetricRepository{client: client}
 }
 
-// SaveMetric stores metric as JSON and updates RSI sorted set rankings
+// SaveMetric stores metric as a Redis Hash and updates RSI sorted set rankings
 func (r *MetricRepository) SaveMetric(metric models.StockMetric) error {
 	ctx := context.Background()
 
-	// Store full metric as JSON: "metric:RELIANCE" → {...}
-	data, err := json.Marshal(metric)
-	if err != nil {
+	// Store each field as a named hash field
+	if err := r.client.HSet(ctx, "metric:"+metric.Symbol,
+		"symbol", metric.Symbol,
+		"price", fmt.Sprintf("%f", metric.Price),
+		"dailyRsi", fmt.Sprintf("%f", metric.DailyRSI),
+		"weeklyRsi", fmt.Sprintf("%f", metric.WeeklyRSI),
+		"monthlyRsi", fmt.Sprintf("%f", metric.MonthlyRSI),
+	).Err(); err != nil {
 		return err
 	}
 
-	if err := r.client.Set(ctx, "metric:"+metric.Symbol, data, 0).Err(); err != nil {
-		return err
-	}
+	fmt.Println(metric.Price)
 
 	// Update RSI sorted set rankings
 	return r.SaveRanking(
@@ -77,17 +81,27 @@ func (r *MetricRepository) SaveRanking(
 func (r *MetricRepository) GetMetric(symbol string) (*models.StockMetric, error) {
 	ctx := context.Background()
 
-	data, err := r.client.Get(ctx, "metric:"+symbol).Bytes()
+	// HGetAll returns map[string]string of all hash fields
+	fields, err := r.client.HGetAll(ctx, "metric:"+symbol).Result()
 	if err != nil {
 		return nil, err
 	}
-
-	var metric models.StockMetric
-	if err := json.Unmarshal(data, &metric); err != nil {
-		return nil, err
+	if len(fields) == 0 {
+		return nil, fmt.Errorf("metric not found for symbol: %s", symbol)
 	}
 
-	return &metric, nil
+	price, _ := strconv.ParseFloat(fields["price"], 64)
+	dailyRSI, _ := strconv.ParseFloat(fields["dailyRsi"], 64)
+	weeklyRSI, _ := strconv.ParseFloat(fields["weeklyRsi"], 64)
+	monthlyRSI, _ := strconv.ParseFloat(fields["monthlyRsi"], 64)
+
+	return &models.StockMetric{
+		Symbol:     fields["symbol"],
+		Price:      price,
+		DailyRSI:   dailyRSI,
+		WeeklyRSI:  weeklyRSI,
+		MonthlyRSI: monthlyRSI,
+	}, nil
 }
 
 func (r *MetricRepository) GetTop50ByCriteria(criteria string) ([]string, error) {

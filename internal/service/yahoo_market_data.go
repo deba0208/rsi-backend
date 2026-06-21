@@ -133,3 +133,15 @@ func (y *YahooMarketDataService) GetCandles(symbol string,
 
 	return y.fetchCandles(symbol, rangeVal, interval)
 }
+
+// GetCurrentPrice returns the most recent close price for a symbol.
+// It fetches the last 5 daily candles and returns the last one.
+func (y *YahooMarketDataService) GetCurrentPrice(symbol string) (float64, error) {
+	candles, err := y.fetchCandles(symbol, "5d", intervalDaily)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get current price for %s: %w", symbol, err)
+	}
+
+	// Return the most recent close (last element)
+	return candles[len(candles)-1].Close, nil
+}
