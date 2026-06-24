@@ -43,4 +43,13 @@ func Start(
 
 	// Start the scheduler in the background
 	s.Start()
+
+	// Run once immediately on startup so metrics are available right away,
+	// rather than waiting for the first cron trigger at 4 PM.
+	go func() {
+		log.Println("[scheduler] Running initial RSI update on startup...")
+		if err := rsiScheduler.Run(); err != nil {
+			log.Printf("[scheduler] Initial run failed: %v", err)
+		}
+	}()
 }

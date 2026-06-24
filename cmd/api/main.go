@@ -35,16 +35,8 @@ func main() {
 	metricRepo := repository.NewMetricRepository(client)
 	metricService := service.NewMetricService(rsiService, marketProvider, metricRepo)
 
-	// Initialize stocks in background — don't block server startup
-	go func() {
-		if err := stockService.InitializeStocks(); err != nil {
-			log.Println("Warning: could not initialize stocks:", err)
-		}
-	}()
-
 	// --- Scheduler ---
 	rsiScheduler := scheduler.NewRSIScheduler(stockService, metricService)
-
 	scheduler.Start(rsiScheduler)
 	// --- Router ---
 	router := gin.Default()

@@ -112,7 +112,7 @@ func (r *MetricRepository) GetTopByTimeFrame(
 	)
 
 	symbols, err :=
-		r.client.ZRange(
+		r.client.ZRevRange(
 			context.Background(),
 			rankingKey,
 			0,
