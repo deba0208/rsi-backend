@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 
 	"github.com/deba0208/stock-rsi-dashboard/internal/config"
@@ -9,20 +10,19 @@ import (
 )
 
 func NewClient(cfg *config.Config) (*goredis.Client, error) {
+
 	client := goredis.NewClient(&goredis.Options{
 		Addr: fmt.Sprintf(
 			"%s:%s",
 			cfg.RedisHost,
 			cfg.RedisPort,
 		),
+		Username: cfg.RedisUsername,
 		Password: cfg.RedisPassword,
+		TLSConfig: &tls.Config{},
 	})
 
-	err := client.Ping(
-		context.Background(),
-	).Err()
-
-	if err != nil {
+	if err := client.Ping(context.Background()).Err(); err != nil {
 		return nil, err
 	}
 
