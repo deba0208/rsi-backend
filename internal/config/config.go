@@ -10,6 +10,7 @@ type Config struct {
 	Port          string
 	RedisHost     string
 	RedisPort     string
+	RedisUsername string
 	RedisPassword string
 }
 
@@ -22,6 +23,7 @@ func LoadConfig() (*Config, error) {
 		Port:          os.Getenv("PORT"),
 		RedisHost:     os.Getenv("REDIS_HOST"),
 		RedisPort:     os.Getenv("REDIS_PORT"),
+		RedisUsername: os.Getenv("REDIS_USERNAME"),
 		RedisPassword: os.Getenv("REDIS_PASSWORD"),
 	}, nil
 }
