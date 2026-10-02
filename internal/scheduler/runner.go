@@ -1,55 +1,59 @@
+
 package scheduler
 
 import (
+	"context"
 	"log"
+	"time"
 
 	"github.com/go-co-op/gocron/v2"
 )
 
-func Start(
-	rsiScheduler *RSIScheduler,
-) {
-
-	s, err := gocron.NewScheduler()
+func Start(rsiScheduler *RSIScheduler) error {
+	// Use Indian Standard Time, regardless of server timezone.
+	loc, err := time.LoadLocation("Asia/Kolkata")
 	if err != nil {
-		log.Printf("Failed to create gocron scheduler: %v", err)
-		return
+		return err
 	}
 
-	_, err = s.NewJob(
-		gocron.CronJob(
-			"0 16 * * 1-5",
-			false,
-		),
-		gocron.NewTask(
-			func() {
-				log.Println("Starting RSI update...")
-
-				err := rsiScheduler.Run()
-				if err != nil {
-					log.Printf("Scheduler failed: %v", err)
-					return
-				}
-
-				log.Println("Scheduler completed")
-			},
-		),
+	s, err := gocron.NewScheduler(
+		gocron.WithLocation(loc),
 	)
-
 	if err != nil {
-		log.Printf("Failed to schedule RSI job: %v", err)
-		return
+		return err
 	}
 
-	// Start the scheduler in the background
+	// Run every weekday at 4:00 PM IST.
+	_, err = s.NewJob(
+		gocron.CronJob("0 16 * * 1-5", false),
+		gocron.NewTask(func() {
+			log.Println("Scheduled RSI update triggered")
+
+			if err := rsiScheduler.Run(); err != nil {
+				log.Printf("Scheduled RSI update failed: %v", err)
+			}
+		}),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Start the cron scheduler.
 	s.Start()
 
-	// Run once immediately on startup so metrics are available right away,
-	// rather than waiting for the first cron trigger at 4 PM.
+	log.Println("RSI scheduler started: weekdays at 4:00 PM Asia/Kolkata")
+
+	// Run once immediately after application startup.
 	go func() {
-		log.Println("[scheduler] Running initial RSI update on startup...")
+		log.Println("Running initial RSI update")
+
 		if err := rsiScheduler.Run(); err != nil {
-			log.Printf("[scheduler] Initial run failed: %v", err)
+			log.Printf("Initial RSI update failed: %v", err)
 		}
 	}()
+
+	// Keep the function signature independent of a blocking wait.
+	_ = context.Background()
+
+	return nil
 }

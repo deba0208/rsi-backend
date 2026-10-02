@@ -44,7 +44,9 @@ log.Println("Redis connected successfully")
 
 	// --- Scheduler ---
 	rsiScheduler := scheduler.NewRSIScheduler(stockService, metricService)
-	scheduler.Start(rsiScheduler)
+	if err := scheduler.Start(rsiScheduler); err != nil {
+    log.Fatalf("Failed to start RSI scheduler: %v", err)
+}
 	// --- Router ---
 	router := gin.Default()
 
