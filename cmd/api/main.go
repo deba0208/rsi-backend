@@ -14,16 +14,23 @@ import (
 
 func main() {
 
+	log.Println("Loading application configuration")
+
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	log.Printf("Redis address: %s:%s", cfg.RedisHost, cfg.RedisPort)
+log.Printf("Redis username: %s", cfg.RedisUsername)
+log.Println("Initializing Redis client...")
+
+
 	client, err := redis.NewClient(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-
+log.Println("Redis connected successfully")
 	// --- Services ---
 	marketProvider := service.NewYahooMarketDataService()
 	rsiService := service.NewRSIService(marketProvider)

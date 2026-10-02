@@ -1,29 +1,48 @@
 services:
   redis:
     image: redis:7-alpine
-    container_name: redis
+    container_name: stock-rsi-redis
     restart: unless-stopped
+    command: >
+      sh -c 'exec redis-server
+      --appendonly yes
+      --requirepass "$$REDIS_PASSWORD"'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
+      test:
+        [
+          "CMD-SHELL",
+          'redis-cli -a "$$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG',
+        ]
+      interval: 10s
+      timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
       - stock-net
 
   app:
     build: .
     container_name: stock-rsi-api
+    restart: unless-stopped
     depends_on:
       redis:
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "8080:8080"
-    restart: unless-stopped
     networks:
       - stock-net
+
+volumes:
+  redis-data:
 
 networks:
   stock-net:

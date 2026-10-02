@@ -1,29 +1,44 @@
+
 package config
 
 import (
-	"os"
+    "fmt"
+    "os"
 
-	"github.com/joho/godotenv"
+    "github.com/joho/godotenv"
 )
 
 type Config struct {
-	Port          string
-	RedisHost     string
-	RedisPort     string
-	RedisUsername string
-	RedisPassword string
+    Port          string
+    RedisHost     string
+    RedisPort     string
+    RedisUsername string
+    RedisPassword string
 }
 
 func LoadConfig() (*Config, error) {
-	// Ignore error — .env file may not exist in production/container environments
-	// where env vars are injected directly.
-	_ = godotenv.Load()
+    // .env is optional in production
+    _ = godotenv.Load()
 
-	return &Config{
-		Port:          os.Getenv("PORT"),
-		RedisHost:     os.Getenv("REDIS_HOST"),
-		RedisPort:     os.Getenv("REDIS_PORT"),
-		RedisUsername: os.Getenv("REDIS_USERNAME"),
-		RedisPassword: os.Getenv("REDIS_PASSWORD"),
-	}, nil
+    cfg := &Config{
+        Port:          os.Getenv("PORT"),
+        RedisHost:     os.Getenv("REDIS_HOST"),
+        RedisPort:     os.Getenv("REDIS_PORT"),
+        RedisUsername: os.Getenv("REDIS_USERNAME"),
+        RedisPassword: os.Getenv("REDIS_PASSWORD"),
+    }
+
+    if cfg.Port == "" {
+        cfg.Port = "8080"
+    }
+
+    if cfg.RedisHost == "" || cfg.RedisPort == "" {
+        return nil, fmt.Errorf("REDIS_HOST and REDIS_PORT are required")
+    }
+
+    if cfg.RedisPassword == "" {
+        return nil, fmt.Errorf("REDIS_PASSWORD is required")
+    }
+
+    return cfg, nil
 }
