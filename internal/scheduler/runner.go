@@ -5,7 +5,7 @@ import (
 	"context"
 	"log"
 	"time"
-
+	 _ "time/tzdata"
 	"github.com/go-co-op/gocron/v2"
 )
 
