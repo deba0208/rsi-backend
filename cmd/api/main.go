@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/deba0208/stock-rsi-dashboard/internal/config"
 	"github.com/deba0208/stock-rsi-dashboard/internal/handler"
@@ -9,6 +10,7 @@ import (
 	"github.com/deba0208/stock-rsi-dashboard/internal/repository"
 	"github.com/deba0208/stock-rsi-dashboard/internal/scheduler"
 	"github.com/deba0208/stock-rsi-dashboard/internal/service"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,15 +24,14 @@ func main() {
 	}
 
 	log.Printf("Redis address: %s:%s", cfg.RedisHost, cfg.RedisPort)
-log.Printf("Redis username: %s", cfg.RedisUsername)
-log.Println("Initializing Redis client...")
-
+	log.Printf("Redis username: %s", cfg.RedisUsername)
+	log.Println("Initializing Redis client...")
 
 	client, err := redis.NewClient(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-log.Println("Redis connected successfully")
+	log.Println("Redis connected successfully")
 	// --- Services ---
 	marketProvider := service.NewYahooMarketDataService()
 	rsiService := service.NewRSIService(marketProvider)
@@ -45,10 +46,30 @@ log.Println("Redis connected successfully")
 	// --- Scheduler ---
 	rsiScheduler := scheduler.NewRSIScheduler(stockService, metricService)
 	if err := scheduler.Start(rsiScheduler); err != nil {
-    log.Fatalf("Failed to start RSI scheduler: %v", err)
-}
+		log.Fatalf("Failed to start RSI scheduler: %v", err)
+	}
 	// --- Router ---
 	router := gin.Default()
+
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: []string{
+			"http://localhost:5174",
+			"https://rsi-frontend.vercel.app/",
+		},
+		AllowMethods: []string{
+			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
+		},
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Authorization",
+		},
+		ExposeHeaders: []string{
+			"Content-Length",
+		},
+		AllowCredentials: false,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	// Health
 	router.GET("/health", func(c *gin.Context) {
