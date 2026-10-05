@@ -54,7 +54,7 @@ func main() {
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"http://localhost:5174",
-			"https://rsi-frontend.vercel.app/",
+			"https://rsi-frontend.vercel.app",
 		},
 		AllowMethods: []string{
 			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
